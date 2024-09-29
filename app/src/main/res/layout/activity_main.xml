@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <!-- Nazwa aplikacji na górze ekranu -->
+    <TextView
+        android:id="@+id/appTitleTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="RunAndFun"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/primaryColor"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Mapa zajmująca górną połowę ekranu -->
+    <fragment
+        android:id="@+id/mapFragment"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/appTitleTextView"
+        app:layout_constraintBottom_toTopOf="@id/runDetailsContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.50" />
+
+    <!-- Przyciski przejścia na stronę profilu i stronę główną -->
+    <LinearLayout
+        android:id="@+id/buttonContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/primaryColor"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Przycisk do przejścia na stronę profilu -->
+        <Button
+            android:id="@+id/profileButton"
+            style="@style/ButtonStyle"
+            android:text="Profil"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="@color/primaryColor" />
+
+        <!-- Przycisk do przejścia na stronę główną -->
+        <Button
+            android:id="@+id/homeButton"
+            style="@style/ButtonStyle"
+            android:text="Strona główna"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="@color/primaryLightColor" />
+    </LinearLayout>
+
+    <!-- Prostokąt z danymi biegu -->
+    <LinearLayout
+        android:id="@+id/runDetailsContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@color/backgroundColor"
+        app:layout_constraintTop_toBottomOf="@id/mapFragment"
+        app:layout_constraintBottom_toTopOf="@id/buttonContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Czas biegu w prostokątnym polu -->
+        <TextView
+            android:id="@+id/timerTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/simple_background"
+            android:text="Czas: 00:00:00"
+            android:textSize="18sp"
+            android:padding="16dp"
+            android:textColor="#333333"
+            android:layout_marginBottom="8dp"
+            android:gravity="center" />
+
+        <!-- Dystans w prostokątnym polu -->
+        <TextView
+            android:id="@+id/distanceTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/simple_background"
+            android:text="Dystans: 0.00 km"
+            android:textSize="18sp"
+            android:padding="16dp"
+            android:textColor="#333333"
+            android:layout_marginBottom="8dp"
+            android:gravity="center" />
+
+        <!-- Tempo w prostokątnym polu -->
+        <TextView
+            android:id="@+id/paceTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/simple_background"
+            android:text="Tempo: 0:00 min/km"
+            android:textSize="18sp"
+            android:padding="16dp"
+            android:textColor="#333333"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <!-- Przycisk Start/Stop biegu -->
+    <Button
+        android:id="@+id/startStopButton"
+        style="@style/ButtonStyle"
+        android:text="Start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textStyle="bold"
+        android:layout_marginTop="16dp"
+        android:backgroundTint="@color/accentColor"
+        app:layout_constraintBottom_toTopOf="@id/runDetailsContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

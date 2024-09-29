@@ -6,6 +6,7 @@ RunAndFun to aplikacja mobilna przeznaczona dla biegaczy, która umożliwia śle
 ## Funkcjonalności
 
 - **Śledzenie biegu:** aplikacja pozwala na rozpoczęcie i zatrzymanie biegu, mierząc czas, dystans i tempo biegu w czasie rzeczywistym.
+- **Powiadomienia push:** Otrzymywanie powiadomień co każdy przebiegnięty kilometr.
 - **Historia biegów:** użytkownicy mogą przeglądać wyniki poprzednich biegów, w tym dystans, czas oraz tempo.
 - **Profil użytkownika:** wyświetlanie informacji o użytkowniku oraz podsumowanie całkowitego dystansu, czasu i średniego tempa.
 - **Mapy Google:** aplikacja wyświetla mapę, na której rysowana jest trasa biegu.

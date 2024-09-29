@@ -1,34 +1,32 @@
 package com.example.runandfun
 
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.content.DialogInterface
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Observer
-import android.widget.Button
-import android.widget.TextView
-import androidx.lifecycle.ViewModelProvider
-import com.example.runandfun.viewmodel.RunViewModel
 import android.content.Intent
-import android.content.res.Resources
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AlertDialog
-import com.google.android.gms.location.Priority
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import android.widget.Button
+import android.widget.TextView
+import com.example.runandfun.viewmodel.RunViewModel
+import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.PolylineOptions
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -47,10 +45,33 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Uzyskaj referencję do ViewModel
     private lateinit var runViewModel: RunViewModel
 
+    // Stała do identyfikacji kanału powiadomień
+    companion object {
+        private const val LOCATION_PERMISSION_REQUEST_CODE = 1000
+        private const val NOTIFICATION_CHANNEL_ID = "RunChannelID"
+        private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         runViewModel = ViewModelProvider(this).get(RunViewModel::class.java)
         setContentView(R.layout.activity_main)
+
+        // Tworzenie kanału powiadomień
+        createNotificationChannel()
+
+        // Dla Androida 13+, poproś o uprawnienie POST_NOTIFICATIONS
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                )
+            }
+        }
 
         // Sprawdź, czy użytkownik ma już zapisane imię
         val sharedPreferences = getSharedPreferences("UserData", Context.MODE_PRIVATE)
@@ -128,6 +149,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 startStopButton.text = "Start"
                 isRunning = false
+                lastKilometer = 0 // Resetowanie ostatniego kilometra
             } else {
                 // Rozpocznij bieg
                 runViewModel.startRun()
@@ -138,16 +160,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-
-
     override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap
         mMap = googleMap
 
         // Sprawdzanie uprawnień do lokalizacji
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST_CODE)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_REQUEST_CODE
+            )
         } else {
             mMap.isMyLocationEnabled = true
             showCurrentLocation()
@@ -269,6 +293,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 val paceTextView: TextView = findViewById(R.id.paceTextView)
                                 paceTextView.text =
                                     String.format("Tempo: %d:%02d min/km", paceMinutes, paceSeconds)
+
+                                // Sprawdzanie i wysyłanie powiadomień co kilometr
+                                checkAndNotifyKilometer(distanceInKm)
                             }
                         }
 
@@ -281,7 +308,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
         }
     }
-
 
     private fun stopTrackingLocation() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
@@ -317,9 +343,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val previousRuns = sharedPreferences.getString("runHistory", "") ?: ""
 
         // Formatowanie danych biegu do zapisu w historii
-        val runData = "Dystans: %.2f km, Czas: ${formatElapsedTime(totalTimeSeconds)}, Tempo: %d:%02d min/km".format(
-            totalDistance, paceMinutes, paceSeconds
-        )
+        val runData =
+            "Dystans: %.2f km, Czas: ${formatElapsedTime(totalTimeSeconds)}, Tempo: %d:%02d min/km".format(
+                totalDistance, paceMinutes, paceSeconds
+            )
 
         // Dodaj nowy bieg do historii
         val newRunHistory = "$previousRuns\n$runData"
@@ -328,7 +355,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         editor.apply()  // Zapisz zmiany
     }
 
-
     // Wynik prośby o uprawnienia
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -336,26 +362,35 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                if (ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    )
-                    == PackageManager.PERMISSION_GRANTED
-                ) {
-                    mMap.isMyLocationEnabled = true
-                    showCurrentLocation()
+        when (requestCode) {
+            LOCATION_PERMISSION_REQUEST_CODE -> {
+                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    if (ContextCompat.checkSelfPermission(
+                            this,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        )
+                        == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        mMap.isMyLocationEnabled = true
+                        showCurrentLocation()
+                    }
+                } else {
+                    // Użytkownik nie przyznał uprawnień, obsłuż to odpowiednio (np. pokaż komunikat)
                 }
-            } else {
-                // Użytkownik nie przyznał uprawnień, obsłuż to odpowiednio (np. pokaż komunikat)
+            }
+
+            NOTIFICATION_PERMISSION_REQUEST_CODE -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                        // Powiadomienia zostały przyznane
+                        Log.d("MainActivity", "Powiadomienia przyznane")
+                    } else {
+                        // Powiadomienia nie zostały przyznane, obsłuż to odpowiednio
+                        Log.d("MainActivity", "Powiadomienia nie przyznane")
+                    }
+                }
             }
         }
-    }
-
-    // Stała do oznaczenia prośby o uprawnienia
-    companion object {
-        private const val LOCATION_PERMISSION_REQUEST_CODE = 1000
     }
 
     // Formatowanie czasu na HH:MM:SS
@@ -369,5 +404,49 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onDestroy() {
         super.onDestroy()
         stopTrackingLocation()
+    }
+
+    // Tworzenie kanału powiadomień
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Biegi"
+            val descriptionText = "Powiadomienia o przebytych kilometrach"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel(NOTIFICATION_CHANNEL_ID, name, importance).apply {
+                description = descriptionText
+            }
+
+            // Rejestracja kanału w systemie
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    // Funkcja wysyłająca powiadomienie
+    private fun sendKilometerNotification(kilometers: Int) {
+        val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_run) // Ikonka powiadomienia
+            .setContentTitle("Biegniesz dalej!")
+            .setContentText("Już $kilometers km za tobą!")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true) // Powiadomienie znika po kliknięciu
+
+        with(NotificationManagerCompat.from(this)) {
+            notify(kilometers, builder.build()) // Unikalny ID powiadomienia to liczba kilometrów
+        }
+    }
+
+    // Funkcja sprawdzająca i wysyłająca powiadomienie co kilometr
+    private var lastKilometer = 0 // Ostatni pełny kilometr
+
+    private fun checkAndNotifyKilometer(distanceInKm: Float) {
+        val kilometers = distanceInKm.toInt()
+
+        // Jeśli minęliśmy nowy pełen kilometr
+        if (kilometers > lastKilometer) {
+            sendKilometerNotification(kilometers)
+            lastKilometer = kilometers
+        }
     }
 }
